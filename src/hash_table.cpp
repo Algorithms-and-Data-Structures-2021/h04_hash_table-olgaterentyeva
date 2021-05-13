@@ -17,14 +17,14 @@ namespace itis {
       throw std::logic_error("hash table load factor must be in range [0...1]");
     }
 
-    buckets_ = std::vector<Bucket>{};
+    //buckets_ = std::vector<Bucket>{};
     buckets_.resize(capacity);
   }
 
   std::optional<std::string> HashTable::Search(int key) const {
     auto index = hash(key);
     auto bucket = buckets_[index];
-    for (std::pair<int, std::string> pair: bucket) {
+    for (std::pair <int, std::string> pair: bucket) {
         if (pair.first == key) {
             return pair.second;
         }
@@ -33,21 +33,38 @@ namespace itis {
   }
 
   void HashTable::Put(int key, const std::string &value) {
-    auto index = hash(key);
-    for (std:: pair<int, std::string> &pair: buckets_[index]) {
+    auto hashIndex = hash(key);
+    for (std:: pair<int, std::string> &pair: buckets_[hashIndex]) {
         if (pair.first == key) {
             pair.second = value;
             return;
         }
     }
-    buckets_[index].emplace_back(key, value);
+    buckets_[hashIndex].emplace_back(key, value);
     num_keys_++;
 
-
+    if (static_cast<double>(num_keys_) / buckets_.size() >= load_factor_) {
+        std::vector<Bucket> new_buckets = std::vector<Bucket>{};
+        new_buckets.resize(buckets_.size() * kGrowthCoefficient);
+        for (Bucket &bucket : buckets_){
+            for (auto& pair : bucket){
+                auto new_index = utils::hash(pair.first, new_buckets.size());
+                new_buckets[new_index].push_back(pair);
+            }
+        }
+        buckets_ = new_buckets;
+    }
   }
 
   std::optional<std::string> HashTable::Remove(int key) {
-
+    int index = hash(key);
+    for (const auto& pair : buckets_[index]) {
+        if (pair.first == key) {
+            std::string to_return = pair.second;
+            buckets_[index].remove(pair);
+            return to_return;
+        }
+    }
     return std::nullopt;
   }
 
